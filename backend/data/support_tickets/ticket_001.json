@@ -1,0 +1,9 @@
+{
+  "ticket_id": "TICKET-001",
+  "customer": "ABC Corp",
+  "created_at": "2026-08-15",
+  "priority": "High",
+  "issue": "Payment integration failing for some users during checkout.",
+  "status": "In Progress",
+  "resolution": "Engineering team is investigating the API timeout issue with the payment gateway provider."
+}

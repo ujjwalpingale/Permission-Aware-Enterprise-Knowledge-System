@@ -1,0 +1,20 @@
+[
+  {
+    "channel": "project-alpha",
+    "timestamp": "2026-08-15T10:30:00",
+    "user": "John",
+    "message": "We committed to delivering the payment integration by September 25."
+  },
+  {
+    "channel": "project-alpha",
+    "timestamp": "2026-08-16T14:20:00",
+    "user": "Sarah",
+    "message": "Engineering is currently on track for the September 25 deadline. Stripe sandbox tests passed."
+  },
+  {
+    "channel": "project-alpha",
+    "timestamp": "2026-08-18T09:15:00",
+    "user": "Alex",
+    "message": "ABC Corp asked if we can support automated refund webhooks. We added it to the current sprint."
+  }
+]

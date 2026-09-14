@@ -1,0 +1,14 @@
+[
+  {
+    "channel": "project-beta",
+    "timestamp": "2026-08-22T11:00:00",
+    "user": "Michael",
+    "message": "Acme Global reviewed the metrics specification document and approved the PostgreSQL reporting layout."
+  },
+  {
+    "channel": "project-beta",
+    "timestamp": "2026-08-25T16:45:00",
+    "user": "Lisa",
+    "message": "We are targeting November 15 for the final delivery of the Project Beta dashboard to Acme Global."
+  }
+]

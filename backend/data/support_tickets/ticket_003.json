@@ -1,0 +1,9 @@
+{
+  "ticket_id": "TICKET-003",
+  "customer": "Nexus Logistics",
+  "created_at": "2026-09-01",
+  "priority": "Low",
+  "issue": "Fleet driver location markers experience a 5 second rendering delay on high latency 3G networks.",
+  "status": "Open",
+  "resolution": "Scheduled for WebSockets compression performance batch optimization in Sprint 14."
+}
