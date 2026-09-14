@@ -1,3 +1,11 @@
+---
+account: ABC Corp
+department: engineering
+access_level: internal
+allowed_roles: engineer,account_manager
+allowed_users: 
+---
+
 # Project Alpha
 
 **Customer:** ABC Corp  

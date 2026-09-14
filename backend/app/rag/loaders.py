@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 
 
 class DocumentLoader:
-    """Modular document loader for Markdown, TXT, and JSON sources."""
+    """Modular document loader with permission metadata extraction for Markdown, TXT, and JSON sources."""
 
     @staticmethod
     def load_file(file_path: Path) -> List[Document]:
@@ -19,16 +19,32 @@ class DocumentLoader:
         elif suffix in [".json"]:
             return DocumentLoader.load_json(file_path)
         else:
-            # Fallback or skip unsupported format for Phase 1
             return []
 
     @staticmethod
+    def _parse_frontmatter(content: str) -> tuple[Dict[str, Any], str]:
+        """Parses simple YAML-style frontmatter from markdown files."""
+        metadata = {}
+        body = content
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                frontmatter_text = parts[1]
+                body = parts[2].strip()
+                for line in frontmatter_text.splitlines():
+                    if ":" in line:
+                        k, v = line.split(":", 1)
+                        metadata[k.strip()] = v.strip()
+        return metadata, body
+
+    @staticmethod
     def load_markdown(file_path: Path) -> List[Document]:
-        content = file_path.read_text(encoding="utf-8")
-        
+        raw_content = file_path.read_text(encoding="utf-8")
+        parsed_meta, body = DocumentLoader._parse_frontmatter(raw_content)
+
         # Infer title from first H1 heading if present
         title = file_path.stem.replace("_", " ").title()
-        for line in content.splitlines():
+        for line in body.splitlines():
             if line.strip().startswith("# "):
                 title = line.strip().lstrip("# ").strip()
                 break
@@ -38,8 +54,14 @@ class DocumentLoader:
             "source_file": file_path.name,
             "document_id": f"doc_{file_path.stem}",
             "title": title,
+            # Permission Metadata Fields
+            "department": str(parsed_meta.get("department", "engineering")),
+            "account": str(parsed_meta.get("account", "*")),
+            "access_level": str(parsed_meta.get("access_level", "internal")),
+            "allowed_roles": str(parsed_meta.get("allowed_roles", "")),
+            "allowed_users": str(parsed_meta.get("allowed_users", "")),
         }
-        return [Document(page_content=content, metadata=metadata)]
+        return [Document(page_content=body, metadata=metadata)]
 
     @staticmethod
     def load_txt(file_path: Path) -> List[Document]:
@@ -51,6 +73,11 @@ class DocumentLoader:
             "source_file": file_path.name,
             "document_id": f"txt_{file_path.stem}",
             "title": title,
+            "department": "general",
+            "account": "*",
+            "access_level": "internal",
+            "allowed_roles": "",
+            "allowed_users": "",
         }
         return [Document(page_content=content, metadata=metadata)]
 
@@ -58,6 +85,12 @@ class DocumentLoader:
     def load_json(file_path: Path) -> List[Document]:
         content_raw = file_path.read_text(encoding="utf-8")
         data = json.loads(content_raw)
+
+        # Helper to format list fields to string for ChromaDB compatibility
+        def format_field(val):
+            if isinstance(val, list):
+                return ",".join(val)
+            return str(val) if val else ""
 
         # Support Ticket JSON format
         if isinstance(data, dict) and "ticket_id" in data:
@@ -79,14 +112,20 @@ class DocumentLoader:
                 "source_file": file_path.name,
                 "document_id": ticket_id,
                 "title": title,
+                "department": str(data.get("department", "support")),
+                "account": str(data.get("account", customer)),
+                "access_level": str(data.get("access_level", "internal")),
+                "allowed_roles": format_field(data.get("allowed_roles", ["support_agent"])),
+                "allowed_users": format_field(data.get("allowed_users", [])),
             }
             return [Document(page_content=text_content, metadata=metadata)]
 
         # Slack conversation JSON format (list of message dicts)
         elif isinstance(data, list):
             channel = "general"
-            if len(data) > 0 and isinstance(data[0], dict) and "channel" in data[0]:
-                channel = data[0]["channel"]
+            first_msg = data[0] if len(data) > 0 and isinstance(data[0], dict) else {}
+            if "channel" in first_msg:
+                channel = first_msg["channel"]
 
             messages_text = []
             for item in data:
@@ -98,21 +137,31 @@ class DocumentLoader:
 
             combined_content = f"Slack Channel: #{channel}\n\n" + "\n".join(messages_text)
             title = f"Slack #{channel}"
+
             metadata = {
                 "source_type": "slack",
                 "source_file": file_path.name,
                 "document_id": f"slack_{file_path.stem}",
                 "title": title,
+                "department": str(first_msg.get("department", "engineering")),
+                "account": str(first_msg.get("account", "*")),
+                "access_level": str(first_msg.get("access_level", "internal")),
+                "allowed_roles": format_field(first_msg.get("allowed_roles", [])),
+                "allowed_users": format_field(first_msg.get("allowed_users", [])),
             }
             return [Document(page_content=combined_content, metadata=metadata)]
 
         else:
-            # Generic JSON document handling
             metadata = {
                 "source_type": "json_document",
                 "source_file": file_path.name,
                 "document_id": f"json_{file_path.stem}",
                 "title": file_path.stem.replace("_", " ").title(),
+                "department": "general",
+                "account": "*",
+                "access_level": "internal",
+                "allowed_roles": "",
+                "allowed_users": "",
             }
             return [Document(page_content=json.dumps(data, indent=2), metadata=metadata)]
 

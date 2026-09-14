@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, status, UploadFile, File
 from backend.app.schemas.chat import ChatRequest, ChatResponse
 from backend.app.services.rag_service import RAGService
 from backend.app.services.ingestion_service import IngestionService
+from backend.app.auth.authentication import UserService
 from backend.app.core.config import settings
 
 logger = logging.getLogger("chat_api")
@@ -30,9 +31,20 @@ def get_rag_service() -> RAGService:
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
+    """Permission-aware chat endpoint requiring valid authenticated user_id."""
+    # 1. Authenticate user
+    user = UserService.get_user_by_id(request.user_id)
+    if not user:
+        logger.warning(f"Authentication failure: Unknown user_id='{request.user_id}'")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication Failed: User ID '{request.user_id}' is not recognized.",
+        )
+
     try:
+        # 2. Process query for authenticated user
         service = get_rag_service()
-        response = service.answer_question(question=request.question)
+        response = service.answer_question(question=request.question, user=user)
         return response
     except HTTPException:
         raise

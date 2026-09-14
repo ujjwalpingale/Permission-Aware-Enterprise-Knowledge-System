@@ -5,5 +5,10 @@
   "priority": "Low",
   "issue": "Fleet driver location markers experience a 5 second rendering delay on high latency 3G networks.",
   "status": "Open",
-  "resolution": "Scheduled for WebSockets compression performance batch optimization in Sprint 14."
+  "resolution": "Scheduled for WebSockets compression performance batch optimization in Sprint 14.",
+  "account": "Nexus Logistics",
+  "department": "support",
+  "access_level": "internal",
+  "allowed_roles": ["support_agent"],
+  "allowed_users": []
 }

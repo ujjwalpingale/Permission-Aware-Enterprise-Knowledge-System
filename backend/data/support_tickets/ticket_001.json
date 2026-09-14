@@ -5,5 +5,10 @@
   "priority": "High",
   "issue": "Payment integration failing for some users during checkout.",
   "status": "In Progress",
-  "resolution": "Engineering team is investigating the API timeout issue with the payment gateway provider."
+  "resolution": "Engineering team is investigating the API timeout issue with the payment gateway provider.",
+  "account": "ABC Corp",
+  "department": "support",
+  "access_level": "internal",
+  "allowed_roles": ["support_agent", "account_manager"],
+  "allowed_users": []
 }

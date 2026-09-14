@@ -3,12 +3,22 @@
     "channel": "project-beta",
     "timestamp": "2026-08-22T11:00:00",
     "user": "Michael",
-    "message": "Acme Global reviewed the metrics specification document and approved the PostgreSQL reporting layout."
+    "message": "XYZ Corp reviewed the metrics specification document and approved the PostgreSQL reporting layout.",
+    "account": "XYZ Corp",
+    "department": "engineering",
+    "access_level": "internal",
+    "allowed_roles": ["engineer"],
+    "allowed_users": []
   },
   {
     "channel": "project-beta",
     "timestamp": "2026-08-25T16:45:00",
     "user": "Lisa",
-    "message": "We are targeting November 15 for the final delivery of the Project Beta dashboard to Acme Global."
+    "message": "We are targeting November 15 for the final delivery of the Project Beta dashboard to XYZ Corp.",
+    "account": "XYZ Corp",
+    "department": "engineering",
+    "access_level": "internal",
+    "allowed_roles": ["engineer"],
+    "allowed_users": []
   }
 ]

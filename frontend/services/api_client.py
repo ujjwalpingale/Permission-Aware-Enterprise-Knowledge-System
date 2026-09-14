@@ -21,10 +21,10 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             return {"status": "offline", "online": False, "error": str(e)}
 
-    def send_question(self, question: str) -> Dict[str, Any]:
-        """Sends a question to the FastAPI /chat endpoint."""
+    def send_question(self, question: str, user_id: str = "user_001") -> Dict[str, Any]:
+        """Sends a permission-aware question request to the FastAPI /chat endpoint."""
         url = f"{self.base_url}/chat"
-        payload = {"question": question}
+        payload = {"user_id": user_id, "question": question}
         headers = {"Content-Type": "application/json"}
 
         try:

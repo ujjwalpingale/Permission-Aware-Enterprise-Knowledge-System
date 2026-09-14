@@ -1,12 +1,13 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from backend.app.core.config import settings
+from backend.app.auth.models import User
 from backend.app.rag.embeddings import get_embedding_function
 from backend.app.rag.vector_store import VectorStoreManager
 from backend.app.rag.retriever import StandardRetriever
 
 
 class RetrievalService:
-    """Service encapsulating retrieval pipeline for user queries."""
+    """Service encapsulating permission-aware retrieval pipeline for user queries."""
 
     def __init__(self, vector_store_manager: VectorStoreManager = None):
         if vector_store_manager:
@@ -23,6 +24,7 @@ class RetrievalService:
         
         self.retriever = StandardRetriever(vector_store_manager=self.vector_store_manager)
 
-    def retrieve_chunks(self, query: str, top_k: int = None) -> List[Dict[str, Any]]:
+    def retrieve_chunks(self, query: str, user: Optional[User], top_k: int = None) -> List[Dict[str, Any]]:
+        """Retrieves permission-filtered chunks for the authenticated user."""
         k = top_k if top_k is not None else settings.TOP_K
-        return self.retriever.retrieve(query=query, top_k=k)
+        return self.retriever.retrieve(query=query, user=user, top_k=k)

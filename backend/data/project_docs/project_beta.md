@@ -1,6 +1,14 @@
+---
+account: XYZ Corp
+department: engineering
+access_level: internal
+allowed_roles: engineer
+allowed_users: 
+---
+
 # Project Beta
 
-**Customer:** Acme Global  
+**Customer:** XYZ Corp  
 **Project Manager:** Michael Chen  
 **Current Status:** Planning  
 **Promised Delivery Date:** November 15, 2026  
@@ -18,7 +26,7 @@ Project Beta aims to build an executive Cloud Analytics Dashboard with real-time
 - **August 30, 2026:** Requirement gathering and data schema specification completed.
 - **September 25, 2026:** System architecture and database design sign-off.
 - **October 30, 2026:** Beta release for internal dogfooding.
-- **November 15, 2026:** General Availability (GA) delivery for Acme Global.
+- **November 15, 2026:** General Availability (GA) delivery for XYZ Corp.
 
 ## Technical Decisions
 - React 18 frontend with Recharts visualization library.
