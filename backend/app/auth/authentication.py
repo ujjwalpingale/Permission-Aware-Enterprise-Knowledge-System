@@ -5,21 +5,24 @@ from backend.app.auth.models import User
 DEMO_USERS: Dict[str, User] = {
     "user_001": User(
         id="user_001",
-        name="Alice",
+        name="Alice Johnson",
+        email="alice.johnson@corp.internal",
         role="account_manager",
         department="sales",
         accessible_accounts=["ABC Corp", "XYZ Corp"],
     ),
     "user_002": User(
         id="user_002",
-        name="Bob",
+        name="Bob Williams",
+        email="bob.williams@corp.internal",
         role="engineer",
         department="engineering",
         accessible_accounts=["XYZ Corp"],
     ),
     "user_003": User(
         id="user_003",
-        name="Charlie",
+        name="Charlie Smith",
+        email="charlie.smith@corp.internal",
         role="support_agent",
         department="support",
         accessible_accounts=["ABC Corp"],
@@ -27,6 +30,7 @@ DEMO_USERS: Dict[str, User] = {
     "admin_001": User(
         id="admin_001",
         name="Admin",
+        email="admin@corp.internal",
         role="admin",
         department="administration",
         accessible_accounts=["*"],
