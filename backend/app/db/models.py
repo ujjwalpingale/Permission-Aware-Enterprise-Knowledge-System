@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Index
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Index, LargeBinary
 from sqlalchemy.orm import relationship
 
 from backend.app.db.database import Base
@@ -63,7 +63,7 @@ class Document(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    file_path = Column(String(512), nullable=True)
+    file_data = Column(LargeBinary, nullable=True)
     file_type = Column(String(50), nullable=True)  # e.g., 'pdf', 'md', 'txt', 'json'
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     is_indexed = Column(Boolean, default=False, nullable=False, index=True)
