@@ -121,3 +121,42 @@ class PermissionService:
     def is_authorized(cls, user: Any, doc_metadata: Any, db: Any = None) -> bool:
         """Delegates directly to canonical can_access_document method to maintain single authorization rule set."""
         return cls.can_access_document(user=user, document=doc_metadata, db=db)
+
+    @classmethod
+    def get_retrieval_filter(cls, user: Any) -> Dict[str, Any]:
+        """Generates the authoritative ChromaDB metadata filter for pre-retrieval authorization.
+
+        Fail-Closed:
+        If user is None, unauthenticated, or has an invalid/missing company_id or role,
+        returns an unmatchable filter {"company_id": "UNAUTHENTICATED_DENY"} ensuring 0 chunks are returned.
+        """
+        if user is None:
+            logger.warning("Denied retrieval filter: User is None.")
+            return {"company_id": "UNAUTHENTICATED_DENY"}
+
+        user_company_id = getattr(user, "company_id", None) or (user.get("company_id") if isinstance(user, dict) else None)
+        user_role_raw = getattr(user, "role", None) or (user.get("role") if isinstance(user, dict) else None)
+
+        if not user_company_id or not user_role_raw:
+            logger.warning(f"Denied retrieval filter: Missing company_id ({user_company_id}) or role ({user_role_raw}).")
+            return {"company_id": "UNAUTHENTICATED_DENY"}
+
+        user_role = str(user_role_raw).lower().strip()
+
+        # Admin filter: Same company, all documents
+        if user_role == "admin":
+            logger.info(f"Generated Admin retrieval filter for company={user_company_id}")
+            return {"company_id": user_company_id}
+
+        # Employee filter: Same company AND role_<role> == True
+        if user_role in VALID_EMPLOYEE_ROLES:
+            logger.info(f"Generated Employee retrieval filter for company={user_company_id} role={user_role}")
+            return {
+                "$and": [
+                    {"company_id": user_company_id},
+                    {f"role_{user_role}": True}
+                ]
+            }
+
+        logger.warning(f"Denied retrieval filter: Invalid employee role '{user_role}'.")
+        return {"company_id": "INVALID_ROLE_DENY"}

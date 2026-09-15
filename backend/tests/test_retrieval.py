@@ -33,7 +33,14 @@ def test_retriever_returns_chunks_with_metadata_and_scores():
     assert results[0]["metadata"]["document_id"] == "doc_project_alpha"
     assert results[0]["metadata"]["title"] == "Project Alpha"
     assert results[0]["score"] == 0.123
+    expected_filter = {
+        "$and": [
+            {"company_id": "comp_a"},
+            {"role_sales": True},
+        ]
+    }
     mock_vector_store.similarity_search_with_score.assert_called_once_with(
         query="What delivery date was promised to ABC Corp?",
-        top_k=15,
+        top_k=5,
+        filter=expected_filter,
     )

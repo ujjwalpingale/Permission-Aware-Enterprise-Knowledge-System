@@ -1,5 +1,5 @@
 import hashlib
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -48,15 +48,16 @@ class VectorStoreManager:
         return len(documents)
 
     def similarity_search_with_score(
-        self, query: str, top_k: int = 5
+        self, query: str, top_k: int = 5, filter: Optional[Dict[str, Any]] = None
     ) -> List[Tuple[Document, float]]:
-        """Performs vector similarity search and returns documents with relevance distance scores."""
+        """Performs vector similarity search with pre-retrieval ChromaDB metadata filter."""
         if not self.vector_store:
             return []
         
         results = self.vector_store.similarity_search_with_score(
             query=query,
             k=top_k,
+            filter=filter,
         )
         return results
 

@@ -138,6 +138,12 @@ async def upload_document(
 
     # 6. In-memory text extraction, chunking, and ChromaDB vector indexing
     try:
+        # Build explicit boolean role flags for pre-retrieval ChromaDB filtering
+        role_flags = {
+            f"role_{r}": (r in [vr.lower() for vr in validated_roles])
+            for r in ["engineer", "hr", "sales", "support"]
+        }
+
         doc_metadata = {
             "document_id": new_doc.id,
             "company_id": current_user.company_id,
@@ -145,6 +151,7 @@ async def upload_document(
             "title": doc_title,
             "file_type": file_type,
             "source_type": f"{file_type}_document",
+            **role_flags,
         }
 
         loaded_docs = DocumentLoader.load_bytes(
@@ -159,13 +166,15 @@ async def upload_document(
         )
         chunks = chunker.split_documents(loaded_docs)
 
-        # Ensure explicit ChromaDB metadata fields on all chunks
+        # Ensure explicit ChromaDB metadata fields and boolean role flags on all chunks
         for chunk in chunks:
             chunk.metadata["document_id"] = new_doc.id
             chunk.metadata["company_id"] = current_user.company_id
             chunk.metadata["allowed_roles"] = ",".join(validated_roles)
             chunk.metadata["title"] = doc_title
             chunk.metadata["file_type"] = file_type
+            for flag_key, flag_val in role_flags.items():
+                chunk.metadata[flag_key] = flag_val
 
         embedding_fn = get_embedding_function(
             api_key=settings.GEMINI_API_KEY,
