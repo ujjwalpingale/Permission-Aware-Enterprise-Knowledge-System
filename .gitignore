@@ -3,8 +3,10 @@
 .env.*
 !.env.example
 *.env
+*.pem
+*.key
 
-# Python
+# Python & Caches
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,24 +28,30 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual Environments
 .venv/
 venv/
 ENV/
 env/
 
-# Vector Store
+# Vector Store & Databases
 backend/chroma_db/
 chroma_db/
 *.chroma
+*.sqlite
+*.sqlite3
+*.db
 
-# Testing & Coverage
+# Testing, Logs & Reports
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
+scratch/
 
-# IDE & OS
+# IDE & OS Generated Files
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+

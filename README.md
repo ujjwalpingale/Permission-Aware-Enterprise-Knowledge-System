@@ -171,7 +171,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_CHAT_MODEL=gemini-2.5-flash
 GEMINI_EMBEDDING_MODEL=models/text-embedding-004
-CHROMA_PERSIST_DIRECTORY=./chroma_db
+CHROMA_PERSIST_DIRECTORY=./backend/chroma_db
 DATABASE_URL=mysql+pymysql://root:password@localhost:3306/enterprise_rag_db
 JWT_SECRET_KEY=your_jwt_secret_key_here
 CHUNK_SIZE=800
