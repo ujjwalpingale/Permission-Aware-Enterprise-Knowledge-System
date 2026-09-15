@@ -5,7 +5,45 @@ from langchain_core.documents import Document
 
 
 class DocumentLoader:
-    """Modular document loader with permission metadata extraction for Markdown, TXT, and JSON sources."""
+    """Modular document loader with permission metadata extraction for Markdown, TXT, JSON, and PDF sources."""
+
+    @staticmethod
+    def load_bytes(file_bytes: bytes, filename: str, metadata: Dict[str, Any]) -> List[Document]:
+        """Extracts text content from in-memory binary bytes based on file extension."""
+        import io
+        suffix = Path(filename).suffix.lower()
+
+        if suffix in [".md", ".markdown"]:
+            raw_content = file_bytes.decode("utf-8", errors="ignore")
+            _, body = DocumentLoader._parse_frontmatter(raw_content)
+            return [Document(page_content=body, metadata=metadata)]
+
+        elif suffix in [".txt"]:
+            raw_content = file_bytes.decode("utf-8", errors="ignore")
+            return [Document(page_content=raw_content, metadata=metadata)]
+
+        elif suffix in [".json"]:
+            raw_content = file_bytes.decode("utf-8", errors="ignore")
+            data = json.loads(raw_content)
+            if isinstance(data, (dict, list)):
+                content = json.dumps(data, indent=2)
+            else:
+                content = str(data)
+            return [Document(page_content=content, metadata=metadata)]
+
+        elif suffix in [".pdf"]:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            extracted_pages = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_pages.append(page_text)
+            content = "\n\n".join(extracted_pages)
+            return [Document(page_content=content, metadata=metadata)]
+
+        else:
+            raise ValueError(f"Unsupported document file type: {suffix}")
 
     @staticmethod
     def load_file(file_path: Path) -> List[Document]:

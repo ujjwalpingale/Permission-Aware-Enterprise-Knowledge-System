@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.schemas.chat import HealthResponse
 from backend.app.api.chat import router as chat_router
 from backend.app.api.auth import router as auth_router
+from backend.app.api.documents import router as documents_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +29,7 @@ app.add_middleware(
 
 # Register endpoints
 app.include_router(auth_router)
+app.include_router(documents_router)
 app.include_router(chat_router)
 
 
