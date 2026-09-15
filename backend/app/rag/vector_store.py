@@ -61,6 +61,16 @@ class VectorStoreManager:
         )
         return results
 
+    def delete_document(self, document_id: str) -> bool:
+        """Deletes all vectors associated with a document_id from ChromaDB collection."""
+        if not self.vector_store:
+            return False
+        try:
+            self.vector_store._collection.delete(where={"document_id": document_id})
+            return True
+        except Exception:
+            return False
+
     def count(self) -> int:
         """Returns total document count in collection."""
         if not self.vector_store:

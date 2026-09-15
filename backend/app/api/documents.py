@@ -244,3 +244,60 @@ def get_documents(
             )
 
     return results
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_200_OK)
+def delete_document(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Admin-only document deletion endpoint removing MySQL record and ChromaDB vectors."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can delete documents.",
+        )
+
+    doc = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.company_id == current_user.company_id,
+        )
+        .first()
+    )
+
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found or does not belong to your organization.",
+        )
+
+    # 1. Delete vectors from ChromaDB
+    try:
+        embedding_fn = get_embedding_function(
+            api_key=settings.GEMINI_API_KEY,
+            model_name=settings.GEMINI_EMBEDDING_MODEL,
+        )
+        vector_store = VectorStoreManager(
+            persist_directory=settings.CHROMA_PERSIST_DIRECTORY,
+            embedding_function=embedding_fn,
+        )
+        vector_store.delete_document(document_id)
+    except Exception as e:
+        logger.warning(f"Could not delete vectors for document {document_id}: {e}")
+
+    # 2. Delete MySQL record (cascades to permissions)
+    try:
+        db.delete(doc)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting document from database: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document from database: {str(e)}",
+        )
+
+    return {"message": f"Document '{doc.title}' deleted successfully.", "id": document_id}

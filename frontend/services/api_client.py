@@ -208,3 +208,16 @@ class APIClient:
             return {"success": False, "error": f"Unable to reach backend at {self.base_url}."}
         except Exception as e:
             return {"success": False, "error": f"Unexpected error during chat request: {str(e)}"}
+
+    def delete_document(self, document_id: str, access_token: str) -> Dict[str, Any]:
+        """Sends DELETE request to /documents/{document_id} with JWT Bearer authentication."""
+        url = f"{self.base_url}/documents/{document_id}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        try:
+            response = requests.delete(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return self._parse_error_response(response, "Document Deletion Failed")
+        except Exception as e:
+            return {"success": False, "error": f"Failed to delete document: {str(e)}"}

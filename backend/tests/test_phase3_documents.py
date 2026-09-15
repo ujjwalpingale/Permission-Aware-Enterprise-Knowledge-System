@@ -400,3 +400,56 @@ def test_legacy_upload_route_removed_and_not_found():
         files={"files": ("legacy.txt", b"legacy data", "text/plain")},
     )
     assert res.status_code == 404, f"Expected 404 Not Found, got {res.status_code}"
+
+
+def test_delete_document_as_admin_success(test_setup):
+    """Test document deletion by admin user."""
+    admin_headers = test_setup["admin_headers"]
+
+    with patch("backend.app.api.documents.VectorStoreManager"):
+        upload_res = client.post(
+            "/documents/upload",
+            headers=admin_headers,
+            data={"title": "Doc to Delete", "allowed_roles": "engineer"},
+            files={"file": ("to_delete.txt", b"Content to delete", "text/plain")},
+        )
+    assert upload_res.status_code == 201
+    doc_id = upload_res.json()["document"]["id"]
+
+    with patch("backend.app.api.documents.VectorStoreManager"):
+        del_res = client.delete(f"/documents/{doc_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+    assert del_res.json()["id"] == doc_id
+
+    # Verify document is no longer returned in GET /documents
+    get_res = client.get("/documents", headers=admin_headers)
+    assert get_res.status_code == 200
+    remaining_ids = [d["id"] for d in get_res.json()]
+    assert doc_id not in remaining_ids
+
+
+def test_delete_document_as_employee_forbidden(test_setup):
+    """Test non-admin employee cannot delete documents."""
+    admin_headers = test_setup["admin_headers"]
+    emp_headers = test_setup["emp_headers"]
+
+    with patch("backend.app.api.documents.VectorStoreManager"):
+        upload_res = client.post(
+            "/documents/upload",
+            headers=admin_headers,
+            data={"title": "Doc for Emp Del Test", "allowed_roles": "engineer"},
+            files={"file": ("emp_del.txt", b"Emp del content", "text/plain")},
+        )
+    assert upload_res.status_code == 201
+    doc_id = upload_res.json()["document"]["id"]
+
+    del_res = client.delete(f"/documents/{doc_id}", headers=emp_headers)
+    assert del_res.status_code == 403, del_res.json()
+
+
+def test_delete_document_not_found(test_setup):
+    """Test deleting a non-existent document ID returns 404."""
+    admin_headers = test_setup["admin_headers"]
+    fake_id = "non_existent_doc_id_99999"
+    del_res = client.delete(f"/documents/{fake_id}", headers=admin_headers)
+    assert del_res.status_code == 404, del_res.json()
