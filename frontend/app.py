@@ -105,23 +105,15 @@ health = client.check_health()
 is_online = health.get("online", False)
 
 # Main Header Section
-h_col1, h_col2 = st.columns([3, 1])
-with h_col1:
-    st.markdown(
-        """
-        <div class="header-card">
-            <div class="header-title">🧠 Enterprise RAG Knowledge Assistant</div>
-            <div class="header-subtitle">Phase 2 — Permission-Aware Knowledge System with Pre-LLM Context Authorization</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-with h_col2:
-    if is_online:
-        st.success("🟢 Backend Online (FastAPI)", icon="✅")
-    else:
-        st.error("🔴 Backend Offline", icon="⚠️")
-        st.caption("Run: `uvicorn backend.app.main:app --reload`")
+st.markdown(
+    """
+    <div class="header-card">
+        <div class="header-title">🧠 Enterprise RAG Knowledge Assistant</div>
+        <div class="header-subtitle">Phase 2 — Permission-Aware Knowledge System with Pre-LLM Context Authorization</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Main Control Grid (User Switcher + Document Uploader)
 ctrl_col1, ctrl_col2 = st.columns([1, 1], gap="medium")
