@@ -1,7 +1,19 @@
+import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
+from backend.app.auth.authentication import get_current_user
+from backend.app.db.models import User as DBUser
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def override_auth_dependency():
+    """Mock get_current_user dependency for schema validation tests."""
+    mock_user = DBUser(id="val_usr", company_id="val_comp", email="val@test.com", role="engineer")
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_empty_question_returns_validation_error():

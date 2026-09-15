@@ -3,14 +3,16 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ChatRequest(BaseModel):
-    user_id: str = Field(..., description="ID of the requesting user e.g. user_001, admin_001")
+    user_id: Optional[str] = Field(None, description="Legacy user ID (optional; ignored for authorization in favor of JWT token)")
     question: str = Field(..., description="The user's query question")
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("user_id cannot be empty or contain only whitespace.")
+    def validate_user_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
         return v.strip()
 
     @field_validator("question")

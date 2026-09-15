@@ -95,9 +95,9 @@ class RAGService:
                     seen_docs.add(doc_id)
                     citations.append(
                         Citation(
-                            document_id=doc_id,
+                            document_id=str(doc_id),
                             title=meta.get("title", "Untitled Document"),
-                            source_type=meta.get("source_type", "document"),
+                            source_type=meta.get("source_type", meta.get("file_type", "document")),
                         )
                     )
 

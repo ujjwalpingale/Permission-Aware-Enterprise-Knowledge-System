@@ -127,7 +127,7 @@ def test_8_unknown_user_returns_http_401():
     """Test 8: Querying with unknown user_id returns HTTP 401 Unauthorized."""
     response = client.post("/chat", json={"user_id": "unknown_user_999", "question": "What is Project Alpha?"})
     assert response.status_code == 401
-    assert "Authentication Failed" in response.json()["detail"]
+    assert "Authentication" in response.json()["detail"]
 
 
 def test_9_unauthorized_source_metadata_is_never_returned(bob_engineer):

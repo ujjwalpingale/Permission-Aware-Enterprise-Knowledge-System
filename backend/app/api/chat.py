@@ -1,9 +1,10 @@
 import logging
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.app.schemas.chat import ChatRequest, ChatResponse
 from backend.app.services.rag_service import RAGService
-from backend.app.auth.authentication import UserService
+from backend.app.auth.authentication import get_current_user
+from backend.app.db.models import User as DBUser
 from backend.app.core.config import settings
 
 logger = logging.getLogger("chat_api")
@@ -26,21 +27,15 @@ def get_rag_service() -> RAGService:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
-    """Permission-aware chat endpoint requiring valid authenticated user_id."""
-    # 1. Authenticate user
-    user = UserService.get_user_by_id(request.user_id)
-    if not user:
-        logger.warning(f"Authentication failure: Unknown user_id='{request.user_id}'")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication Failed: User ID '{request.user_id}' is not recognized.",
-        )
-
+async def chat_endpoint(
+    request: ChatRequest,
+    current_user: DBUser = Depends(get_current_user),
+):
+    """Permission-aware chat endpoint requiring valid JWT authenticated user."""
     try:
-        # 2. Process query for authenticated user
+        # Process query strictly using authenticated JWT user
         service = get_rag_service()
-        response = service.answer_question(question=request.question, user=user)
+        response = service.answer_question(question=request.question, user=current_user)
         return response
     except HTTPException:
         raise
