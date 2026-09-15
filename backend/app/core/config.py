@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     GEMINI_CHAT_MODEL: str = "gemini-2.5-flash"
     GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     CHROMA_PERSIST_DIRECTORY: str = DEFAULT_CHROMA_DIR
-    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/enterprise_rag_db"
+    DATABASE_URL: str = "mysql+pymysql://root:root@localhost:3306/enterprise_rag_db"
     JWT_SECRET_KEY: str = "supersecret_enterprise_rag_jwt_key_2026_change_in_production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440
