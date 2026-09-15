@@ -8,16 +8,19 @@ def test_retriever_returns_chunks_with_metadata_and_scores():
     """Test retriever formats search results with content, metadata, and distance scores."""
     mock_vector_store = MagicMock()
     user = UserService.get_user_by_id("user_001")
+    user.role = "sales"
+    user.company_id = "comp_a"
 
     sample_doc = Document(
         page_content="The team committed to delivering the payment integration by September 25, 2026.",
         metadata={
             "document_id": "doc_project_alpha",
+            "company_id": "comp_a",
             "title": "Project Alpha",
             "source_type": "project_document",
             "account": "ABC Corp",
             "access_level": "internal",
-            "allowed_roles": "engineer,account_manager",
+            "allowed_roles": "engineer,sales",
         },
     )
     mock_vector_store.similarity_search_with_score.return_value = [(sample_doc, 0.123)]

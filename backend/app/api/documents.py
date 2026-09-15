@@ -15,6 +15,7 @@ from backend.app.rag.loaders import DocumentLoader
 from backend.app.rag.chunker import DocumentChunker
 from backend.app.rag.embeddings import get_embedding_function
 from backend.app.rag.vector_store import VectorStoreManager
+from backend.app.auth.authorization import PermissionService
 
 logger = logging.getLogger("documents_api")
 
@@ -214,35 +215,23 @@ def get_documents(
     db: Session = Depends(get_db),
 ):
     """Retrieves company documents scoped to authenticated user's company and role permissions."""
-    if current_user.role == "admin":
-        # Admin can view all documents belonging to their company
-        docs = db.query(Document).filter(Document.company_id == current_user.company_id).all()
-    else:
-        # Employee can view company documents where they hold matching role permission
-        docs = (
-            db.query(Document)
-            .join(DocumentPermission)
-            .filter(
-                Document.company_id == current_user.company_id,
-                DocumentPermission.allowed_role == current_user.role,
-            )
-            .all()
-        )
+    docs = db.query(Document).filter(Document.company_id == current_user.company_id).all()
 
     results = []
     for doc in docs:
-        allowed_roles = [p.allowed_role for p in doc.permissions]
-        results.append(
-            DocumentResponse(
-                id=doc.id,
-                company_id=doc.company_id,
-                title=doc.title,
-                file_type=doc.file_type,
-                created_by=doc.created_by,
-                is_indexed=doc.is_indexed,
-                created_at=doc.created_at,
-                allowed_roles=allowed_roles,
+        if PermissionService.can_access_document(user=current_user, document=doc, db=db):
+            allowed_roles = [p.allowed_role for p in doc.permissions]
+            results.append(
+                DocumentResponse(
+                    id=doc.id,
+                    company_id=doc.company_id,
+                    title=doc.title,
+                    file_type=doc.file_type,
+                    created_by=doc.created_by,
+                    is_indexed=doc.is_indexed,
+                    created_at=doc.created_at,
+                    allowed_roles=allowed_roles,
+                )
             )
-        )
 
     return results

@@ -1,12 +1,8 @@
 import logging
-import shutil
-from pathlib import Path
-from typing import List
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, HTTPException, status
 
 from backend.app.schemas.chat import ChatRequest, ChatResponse
 from backend.app.services.rag_service import RAGService
-from backend.app.services.ingestion_service import IngestionService
 from backend.app.auth.authentication import UserService
 from backend.app.core.config import settings
 
@@ -61,38 +57,3 @@ async def chat_endpoint(request: ChatRequest):
             detail=f"An internal server error occurred while processing your request: {err_msg}",
         )
 
-
-@router.post("/upload")
-async def upload_documents(files: List[UploadFile] = File(...)):
-    """Endpoint to upload documents (.md, .txt, .json) and ingest them into ChromaDB."""
-    try:
-        data_dir = Path(__file__).resolve().parent.parent.parent / "data" / "project_docs"
-        data_dir.mkdir(parents=True, exist_ok=True)
-
-        saved_files = []
-        for file in files:
-            file_path = data_dir / file.filename
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            saved_files.append(file.filename)
-
-        # Trigger ingestion service
-        ingestion_service = IngestionService()
-        result = ingestion_service.run_ingestion()
-
-        # Invalidate global rag_service to force reload vector store on next query
-        global _rag_service
-        _rag_service = None
-
-        return {
-            "status": "success",
-            "message": f"Successfully uploaded and ingested {len(saved_files)} document(s).",
-            "saved_files": saved_files,
-            "ingestion_result": result,
-        }
-    except Exception as e:
-        logger.error(f"Upload failed: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process and ingest uploaded documents: {str(e)}",
-        )

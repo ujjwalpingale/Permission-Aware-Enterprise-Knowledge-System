@@ -1,97 +1,123 @@
 import logging
-from typing import Dict, Any, List, Union
-from backend.app.auth.models import User
+from typing import Dict, Any, List, Union, Optional
 
 logger = logging.getLogger("authorization")
 
+VALID_EMPLOYEE_ROLES = {"engineer", "hr", "sales", "support"}
+
 
 class PermissionService:
-    """Centralized authorization rules engine.
-    
+    """Centralized, single authoritative document permission service.
+
     Security Principle: Fail Closed.
-    Never grant access because metadata is missing, malformed, or unauthenticated.
+    Never grant access if user, document, company_id, or role permissions are missing or mismatching.
     """
 
     @staticmethod
     def _parse_list_field(val: Union[str, List[str], None]) -> List[str]:
-        """Helper to parse list metadata fields stored as python lists or comma-separated strings in ChromaDB."""
+        """Helper to parse role metadata fields stored as lists or comma-separated strings."""
         if not val:
             return []
         if isinstance(val, list):
-            return [str(item).strip() for item in val if item]
+            return [str(item).strip().lower() for item in val if item]
         if isinstance(val, str):
             val_str = val.strip()
             if not val_str:
                 return []
-            return [item.strip() for item in val_str.split(",") if item.strip()]
+            return [item.strip().lower() for item in val_str.split(",") if item.strip()]
         return []
 
     @classmethod
-    def is_authorized(cls, user: User, doc_metadata: Dict[str, Any]) -> bool:
-        """Determines whether a user is authorized to view a chunk/document based on permission metadata.
-        
-        Fail-Closed: Returns False on any error, missing user, or invalid metadata.
+    def can_access_document(
+        cls,
+        user: Any,
+        document: Any,
+        db: Any = None,
+    ) -> bool:
+        """Single authoritative method to determine if a user can access a document.
+
+        Checks:
+        1. Fail Closed (user, document, user_id, user_role, user_company_id must exist).
+        2. Strict Multi-Tenant Company Boundary (user.company_id == document.company_id).
+        3. Admin Access (Admin has access to all documents in their own company).
+        4. Employee Access (Employee role must match document's allowed_roles).
         """
-        # Rule 0: Fail closed on missing user or metadata
-        if not user or not doc_metadata or not isinstance(doc_metadata, dict):
-            logger.warning("Denied: Missing user or metadata.")
+        # 1. Fail Closed: missing user or document
+        if user is None or document is None:
+            logger.warning("Denied: Missing user or document object.")
             return False
 
-        doc_id = doc_metadata.get("document_id", "unknown_doc")
+        # Extract user fields safely
+        user_id = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+        user_company_id = getattr(user, "company_id", None) or (user.get("company_id") if isinstance(user, dict) else None)
+        user_role_raw = getattr(user, "role", None) or (user.get("role") if isinstance(user, dict) else None)
 
-        # Rule 1: Admin bypass - Admin has global access to everything
-        if user.role == "admin" or user.id == "admin_001":
-            logger.info(f"Allowed (Admin): user={user.id} doc={doc_id}")
-            return True
+        if not user_id or not user_company_id or not user_role_raw:
+            logger.warning(f"Denied: User missing required attributes (id={user_id}, company_id={user_company_id}, role={user_role_raw}).")
+            return False
 
-        # Extract permission metadata fields
-        access_level = str(doc_metadata.get("access_level", "restricted")).lower().strip()
-        account = str(doc_metadata.get("account", "*")).strip()
-        department = str(doc_metadata.get("department", "*")).lower().strip()
-        allowed_roles = cls._parse_list_field(doc_metadata.get("allowed_roles"))
-        allowed_users = cls._parse_list_field(doc_metadata.get("allowed_users"))
+        user_role = str(user_role_raw).lower().strip()
 
-        # Rule 2: Explicit User Permission
-        if user.id in allowed_users:
-            logger.info(f"Allowed (Explicit User): user={user.id} doc={doc_id}")
-            return True
+        # Extract document fields safely
+        doc_company_id = None
+        doc_allowed_roles: List[str] = []
 
-        # Rule 3: Public Access Level
-        if access_level == "public":
-            logger.info(f"Allowed (Public): user={user.id} doc={doc_id}")
-            return True
+        if isinstance(document, dict):
+            # Document dictionary or ChromaDB chunk metadata
+            doc_company_id = document.get("company_id")
+            doc_allowed_roles = cls._parse_list_field(document.get("allowed_roles"))
 
-        # Rule 4: Account Access Restriction
-        # If document is tied to a specific account, user must have access to that account (or global '*')
-        if account != "*" and account != "":
-            user_accounts = [acc.strip() for acc in user.accessible_accounts]
-            if "*" not in user_accounts and account not in user_accounts:
-                logger.info(f"Denied (Account Mismatch): user={user.id} doc={doc_id} doc_account='{account}' user_accounts={user_accounts}")
+        elif hasattr(document, "company_id"):
+            # SQLAlchemy Document ORM object
+            doc_company_id = getattr(document, "company_id", None)
+            if hasattr(document, "permissions") and document.permissions:
+                doc_allowed_roles = [p.allowed_role.lower().strip() for p in document.permissions if hasattr(p, "allowed_role")]
+            else:
+                doc_allowed_roles = cls._parse_list_field(getattr(document, "allowed_roles", None))
+
+        elif isinstance(document, str) and db is not None:
+            # Document ID passed as string with active db session
+            from backend.app.db.models import Document
+            doc_obj = db.query(Document).filter(Document.id == document).first()
+            if not doc_obj:
+                logger.warning(f"Denied: Document ID '{document}' not found in database.")
                 return False
+            doc_company_id = doc_obj.company_id
+            doc_allowed_roles = [p.allowed_role.lower().strip() for p in doc_obj.permissions]
 
-        # Rule 5: Restricted Access Level
-        if access_level == "restricted":
-            # For restricted documents, explicit allowed_roles or explicit allowed_users match is required
-            role_match = bool(allowed_roles and user.role in allowed_roles)
-            user_match = bool(allowed_users and user.id in allowed_users)
-            if not (role_match or user_match):
-                logger.info(f"Denied (Restricted Role/User Mismatch): user={user.id} doc={doc_id} user_role='{user.role}' allowed_roles={allowed_roles}")
-                return False
-            if department != "*" and department != "" and user.department != department:
-                logger.info(f"Denied (Restricted Dept Mismatch): user={user.id} doc={doc_id} user_dept='{user.department}' doc_dept='{department}'")
-                return False
-            logger.info(f"Allowed (Restricted Passed): user={user.id} doc={doc_id}")
+        else:
+            logger.warning("Denied: Unrecognized document object format.")
+            return False
+
+        if not doc_company_id:
+            logger.warning("Denied: Document missing company_id.")
+            return False
+
+        # 2. Strict Multi-Tenant Company Boundary Check (FIRST RULE)
+        if user_company_id != doc_company_id:
+            logger.info(
+                f"Denied (Cross-Company Access Attempt): user={user_id} user_company='{user_company_id}' doc_company='{doc_company_id}'"
+            )
+            return False
+
+        # 3. Admin Access Rule (Same Company)
+        if user_role == "admin":
+            logger.info(f"Allowed (Admin Same Company): user={user_id} company={user_company_id}")
             return True
 
-        # Rule 6: Internal Access Level
-        if access_level == "internal":
-            # Role check if roles specified
-            if allowed_roles and user.role not in allowed_roles:
-                logger.info(f"Denied (Internal Role Mismatch): user={user.id} doc={doc_id} user_role='{user.role}' allowed={allowed_roles}")
-                return False
-            logger.info(f"Allowed (Internal Passed): user={user.id} doc={doc_id}")
+        # 4. Employee Access Rule (Role Match)
+        if user_role not in VALID_EMPLOYEE_ROLES:
+            logger.warning(f"Denied (Invalid Employee Role): user={user_id} role='{user_role}'")
+            return False
+
+        if user_role in doc_allowed_roles:
+            logger.info(f"Allowed (Employee Role Match): user={user_id} role='{user_role}' doc_roles={doc_allowed_roles}")
             return True
 
-        # Default Fail-Closed
-        logger.info(f"Denied (Default Fail Closed): user={user.id} doc={doc_id}")
+        logger.info(f"Denied (Employee Role Mismatch): user={user_id} role='{user_role}' doc_roles={doc_allowed_roles}")
         return False
+
+    @classmethod
+    def is_authorized(cls, user: Any, doc_metadata: Any, db: Any = None) -> bool:
+        """Delegates directly to canonical can_access_document method to maintain single authorization rule set."""
+        return cls.can_access_document(user=user, document=doc_metadata, db=db)

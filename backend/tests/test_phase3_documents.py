@@ -391,3 +391,12 @@ def test_19_and_20_mysql_is_active_and_no_sqlite():
     """Test 19 & 20: Confirm active engine is MySQL dialect and no SQLite is used."""
     assert engine.dialect.name == "mysql"
     assert engine.dialect.driver == "pymysql"
+
+
+def test_legacy_upload_route_removed_and_not_found():
+    """Regression Test: Confirm legacy POST /upload endpoint is removed and returns HTTP 404."""
+    res = client.post(
+        "/upload",
+        files={"files": ("legacy.txt", b"legacy data", "text/plain")},
+    )
+    assert res.status_code == 404, f"Expected 404 Not Found, got {res.status_code}"
